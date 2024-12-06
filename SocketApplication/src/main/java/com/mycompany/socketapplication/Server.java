@@ -5,12 +5,13 @@
 
 package com.mycompany.socketapplication;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.*;
+import java.net.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Optional;
 
 /**
  * @author Daniel García
@@ -40,6 +41,8 @@ public class Server {
     
     private static void run(){
         try{
+            String output = "";
+            
             //Get socket from the client
             Socket clientSocket = serverSocket.accept();
             System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
@@ -49,11 +52,49 @@ public class Server {
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
             // Read data from the client and display it
-            String clientData = in.readLine();
-            System.out.println("Received from client: " + clientData);
+            String clientUrl = in.readLine();
+            System.out.println("Received from client: " + clientUrl);
+            //If client sends blank, set default url
+            if(clientUrl.equals("")){
+                clientUrl = "http://nginx.org/";
+            }
+            
+            try{
+                HttpClient client = HttpClient.newBuilder().build();
+                //Connect with url
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(clientUrl))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .build();
+                HttpResponse<Void> response = client.send(request,
+                HttpResponse.BodyHandlers.discarding());
+                HttpHeaders headers = response.headers();
+                
+                System.out.println(headers);
+                
+                //Get Status code (200 -> Success, 400 -> Error in request, 500 -> Server error
+                int status = response.statusCode();
+                System.out.println(headers);
+                System.out.println(response.statusCode());
+                
+                if(status == 200){
+                    output = "Connection to " + clientUrl + " is successful";
+                }else{
+                    output = "Server can't connect to url";
+                }
+                
+            }catch(InterruptedException e){
+                System.out.println("Error: " + e);
+            }catch(IllegalArgumentException iae){
+                System.out.println("Error in URL: " + iae);
+                output = "Syntax error in URL. Please review your URL and send again";
+            }catch(ConnectException ce){
+                System.out.println("Error in URL: " + ce);
+                output = "The server can't find that specific URL. Try again";
+            }
             
             // Send a response back to the client
-            out.println("Hello from the server!");
+            out.println(output);
 
             //Closes out buffer and writer
             in.close();

@@ -30,7 +30,7 @@ public class Client {
             String url = bfReader.readLine();
             
             // Send url to the server
-            outputWriter.println("asdasdad");
+            outputWriter.println(url);
             
             // Read the response from the server
             String serverResponse = inputReader.readLine();
